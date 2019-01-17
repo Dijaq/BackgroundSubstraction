@@ -13,11 +13,15 @@ using namespace cv;
 namespace fs = std::experimental::filesystem::v1;
 
 Mat extract_LSBP(Mat frame);
-Mat SVD_init(Mat frame);
+void SVD_init(Mat frame);
+Mat SVD_step(Mat frame);
 double _SVD(arma::mat matriz);// return the singular values sum (s[1]+s[2])/s[0]
+int clip(int i, int inferior, int superior, int val_range);
 
-Mat D, samples_lsbp;
-list<Mat> samples_int;
+
+Mat D;
+list<Mat> samples_lsbp;
+list<Mat> samples_frame;
 int heigth, width;
 
 int main()
@@ -84,7 +88,8 @@ int main()
 					img = imread("highway/input/in00"+to_string(f)+".jpg", CV_LOAD_IMAGE_COLOR);
 		//Delete for a video
 
-		Mat result = SVD_init(img); 
+		SVD_init(img);
+		Mat result = SVD_step(img); 
 		
 		imshow("imagen", result);
 
@@ -93,7 +98,7 @@ int main()
 	return 0;
 }
 
-
+//Extrae la matriz de valores singulares SVD (s[1]+s[2])/s[0]
 Mat extract_LSBP(Mat frame, int tau=0.05)
 {
 	Mat intensity;
@@ -102,6 +107,7 @@ Mat extract_LSBP(Mat frame, int tau=0.05)
 
 	//Mat m_svd = Mat::zeros(3, 3, CV_8UC1);
 	Mat g = Mat::zeros(width, heigth, CV_8UC1);
+	//Mat LSBP = Mat::zeros(width, heigth, CV_8UC9);
 	
 //SVD descomposicion
 	for(int i=1; i<width-1; i++)
@@ -149,13 +155,58 @@ Mat extract_LSBP(Mat frame, int tau=0.05)
 		}
 	}
 
+	/*for(int i=1; i<width-1; i++)
+	{
+		for(int j=1; j<heigth-1; j++)
+		{
+			if(abs(g.at<double>(i,j)-g.at<double>(i-1,j-1))<tau)
+			{
+				((Scalar)LSBP.at<uchar>(i+1,j+1))[0] = 0;
+			}
+			else
+			{
+				((Scalar)LSBP.at<uchar>(i+1,j+1))[0] = 1;
+			}
+
+		}
+	}*/
+
 	return g;
 }
 
-Mat SVD_init(Mat frame)
+void SVD_init(Mat frame)
 {
+	Mat svd = extract_LSBP(frame, 0.05);
+	samples_lsbp.push_back(svd);
+	samples_frame.push_back(frame);
+	int i0, j0;
+
+	for(int k=1; k<10;k++)
+	{
+		Mat fr = Mat::zeros(svd.rows, svd.cols, CV_8UC3);
+		Mat lsbp = Mat::zeros(svd.rows, svd.cols, CV_8UC1);
+		for(int i=0; i<svd.rows; i++)
+		{
+			for(int j=0; j<svd.cols; j++)
+			{
+				i0 = clip(i,10,svd.rows-10,10);
+				j0 = clip(j,10,svd.rows-10,10);
+				fr.at<Vec3b>(i0,j0) = frame.at<Vec3b>(i0, j0);
+				lsbp.at<uchar>(i0,j0) = svd.at<uchar>(i0, j0); 
+			}
+		}
+
+		samples_lsbp.push_back(lsbp);
+		samples_frame.push_back(fr);
+
+	}
 	//Mat lsbp = extract_LSBP(frame);
 
+	//return extract_LSBP(frame, 0.05);
+}
+
+Mat SVD_step(Mat frame)
+{
 	return extract_LSBP(frame, 0.05);
 }
 
@@ -177,4 +228,27 @@ double _SVD(arma::mat matriz)
     //cout << w2[2] << " "<<w2[1] << " "<<w2[0] << endl;
 	return ((w2[2]+w2[1])/w2[0]);
 	//return singular_values; 
+}
+
+int clip(int i, int inferior, int superior, int val_range)
+{
+	int i0;
+	if(i<inferior)
+		{
+			i0 = rand()%val_range-rand()%val_range+inferior;
+		}
+		else
+		{
+			if(i>superior)
+			{
+				i0 = rand()%val_range-rand()%val_range+superior;
+			}
+			else
+			{
+				i0 = rand()%val_range-rand()%val_range+i;
+			}
+		}
+
+	return i0;
+
 }
