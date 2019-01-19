@@ -22,6 +22,7 @@ int clip(int i, int inferior, int superior, int val_range);
 
 
 Mat D, fr, lsbp;
+Mat R, T;
 list<Mat> samples_lsbp;
 list<Mat> samples_frame;
 int heigth, width;
@@ -48,9 +49,9 @@ int main()
 	heigth = img.cols;
 	width = img.rows;
 
-	Mat ones = Mat::ones(2, 3, CV_32F)*0.2;
-	Mat R = Mat::ones(width, heigth, CV_8UC1)*0.2;
-	Mat T = Mat::ones(width, heigth, CV_8UC1)*0.08;
+	Mat ones = Mat::ones(2, 3, CV_32FC1)*0.2;
+	R = Mat::ones(width, heigth, CV_32FC1)*0.2;
+	T = Mat::ones(width, heigth, CV_8UC1)*0.08;
 
 	list<Mat> lD;
 	for(int s=0; s<samples; s++)
@@ -75,9 +76,9 @@ int main()
 	namedWindow("imagen", WINDOW_AUTOSIZE);
 	imshow("imagen", img);
 	Mat result = SVD_init(img, samples);
-	waitKey(5000);
+	waitKey(1);
 
-	for(int f=2; f<=2; f++)
+	for(int f=2; f<=4; f++)
 	{
 		cout << "=========: " << f << endl;
 		//Only to read
@@ -107,7 +108,10 @@ int main()
 			waitKey(5000);
 		}*/
 
-		SVD_step(img, 4, 2, 5, 0.1, 0.02);
+		Mat result = SVD_step(img, 4, 2, 5, 0.1, 0.02);
+		imshow("imagen", result);
+		waitKey(5000);
+
 
 		auto t12 = std::chrono::high_resolution_clock::now();
 		//Mat result = SVD_step(img); 
@@ -121,10 +125,23 @@ int main()
 }
 
 //Extrae la matriz de valores singulares SVD (s[1]+s[2])/s[0]
+//intensity_fr with 0 
 void extract_LSBP(Mat frame, Mat &g, int tau=0.05)
 {
 	Mat intensity;
 	cvtColor(frame, intensity, COLOR_BGR2GRAY);
+	Mat intensity_fr = Mat::zeros(frame.rows+2, frame.cols+2, CV_8UC1);
+
+	for(int i=0; i<(frame.rows+2)-1; i++)
+	{
+		for(int j=0; j<(frame.cols+2)-1; j++)
+		{
+			intensity_fr.at<uchar>(i+1,j+1) = intensity.at<uchar>(i,j); 
+		}
+	}
+	
+
+
 //Falta asignar los bordes
 
 	//Mat m_svd = Mat::zeros(3, 3, CV_8UC1);
@@ -133,9 +150,9 @@ void extract_LSBP(Mat frame, Mat &g, int tau=0.05)
 	
 //SVD descomposicion
 	auto t11 = std::chrono::high_resolution_clock::now();
-	for(int i=1; i<width-1; i++)
+	for(int i=1; i<intensity_fr.rows-1; i++)
 	{
-		for(int j=1; j<heigth-1; j++)
+		for(int j=1; j<intensity_fr.cols-1; j++)
 		{
 			//cout << ((Scalar)intensity.at<uchar>(i-1,j-1))[0] << endl;
 			//cout << ((Scalar)intensity.at<uchar>(i-1,j))[0] << endl;
@@ -156,17 +173,17 @@ void extract_LSBP(Mat frame, Mat &g, int tau=0.05)
 			m_svd.at<uchar>(2,2) = ((Scalar)intensity.at<uchar>(i+1,j+1))[0];*/
 
 			arma::mat m_svd;
-			m_svd = {{((Scalar)intensity.at<uchar>(i-1,j-1))[0],
-			((Scalar)intensity.at<uchar>(i-1,j))[0],
-			((Scalar)intensity.at<uchar>(i-1,j+1))[0]},
+			m_svd = {{((Scalar)intensity_fr.at<uchar>(i-1,j-1))[0],
+			((Scalar)intensity_fr.at<uchar>(i-1,j))[0],
+			((Scalar)intensity_fr.at<uchar>(i-1,j+1))[0]},
 
-			{((Scalar)intensity.at<uchar>(i,j-1))[0],
-			((Scalar)intensity.at<uchar>(i,j))[0],
-			((Scalar)intensity.at<uchar>(i,j+1))[0]},
+			{((Scalar)intensity_fr.at<uchar>(i,j-1))[0],
+			((Scalar)intensity_fr.at<uchar>(i,j))[0],
+			((Scalar)intensity_fr.at<uchar>(i,j+1))[0]},
 
-			{((Scalar)intensity.at<uchar>(i+1,j-1))[0],
-			((Scalar)intensity.at<uchar>(i+1,j))[0],
-			((Scalar)intensity.at<uchar>(i+1,j+1))[0]}};
+			{((Scalar)intensity_fr.at<uchar>(i+1,j-1))[0],
+			((Scalar)intensity_fr.at<uchar>(i+1,j))[0],
+			((Scalar)intensity_fr.at<uchar>(i+1,j+1))[0]}};
 
 			((Scalar)g.at<double>(i,j))[0] = _SVD(m_svd);
 			//cout << m_svd << endl;
@@ -181,7 +198,7 @@ void extract_LSBP(Mat frame, Mat &g, int tau=0.05)
 	auto t12 = std::chrono::high_resolution_clock::now();
 	cout << "Time_ex: " << std::chrono::duration_cast<std::chrono::milliseconds>(t12 - t11).count() << endl;
 
-	intensity.release();
+	intensity_fr.release();
 
 	/*for(int i=1; i<width-1; i++)
 	{
@@ -202,7 +219,7 @@ void extract_LSBP(Mat frame, Mat &g, int tau=0.05)
 
 Mat SVD_init(Mat frame, int samples)
 {
-	Mat svd = Mat::zeros(width, heigth, CV_8UC1);
+	Mat svd = Mat::zeros(width+2, heigth+2, CV_8UC1);
 	
 	extract_LSBP(frame, svd, 0.05);
 
@@ -226,10 +243,11 @@ Mat SVD_init(Mat frame, int samples)
 		{
 			for(int j=0; j<frame.cols; j++)
 			{
-				i0 = clip(i,30,frame.rows-30,30);
-				j0 = clip(j,30,frame.cols-30,30);
-				fr.at<Vec3b>(i0,j0) = frame.at<Vec3b>(i0, j0);
-				((Scalar)lsbp.at<double>(i0,j0))[0] = ((Scalar)svd.at<double>(i0, j0))[0]; 
+				i0 = clip(i,10,frame.rows-10,10);
+				j0 = clip(j,10,frame.cols-10,10);
+
+				fr.at<Vec3b>(i0,j0) = frame.at<Vec3b>(i, j);
+				((Scalar)lsbp.at<double>(i0,j0))[0] = ((Scalar)svd.at<double>(i, j))[0]; 
 			}
 		}
 
@@ -257,21 +275,58 @@ Mat _SVD_init(Mat frame)
 	return _frame;
 }
 
+//threshold  HR PY
+// matches   threshold PY
 Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr=0.1, double Tlr=0.02)
 {
-	list<Mat>::iterator next_frame;
-	next_frame = samples_frame.begin();
-
-	while(next_frame != samples_frame.end())
+	Mat white = Mat::ones(1,1, CV_8UC1)*255;
+	Mat mask = Mat::zeros(frame.rows, frame.cols, CV_8UC1);
+	for(int i=0; i<frame.rows; i++)
 	{
-		cout << "frames" << endl;
-		imshow("imagen", *next_frame);
-		next_frame++;
-		waitKey(5000);
-	}
+		for(int j=0; j<frame.cols; j++)
+		{
+			list<Mat>::iterator next_frame;
+			next_frame = samples_frame.begin();
+
+			int samples_matches = 0;
+
+			while(next_frame != samples_frame.end())
+			{
+				//double L1_distance = ((Scalar)(*next_frame).at<Vec3b>(i, j))[0];
+
+				double L1_distance = abs(((Scalar)frame.at<Vec3b>(i, j))[0]-((Scalar)(*next_frame).at<Vec3b>(i, j))[0])+
+				abs(((Scalar)frame.at<Vec3b>(i, j))[1]-((Scalar)(*next_frame).at<Vec3b>(i, j))[1])+
+				abs(((Scalar)frame.at<Vec3b>(i, j))[2]-((Scalar)(*next_frame).at<Vec3b>(i, j))[2]);
+
+				//fr.at<Vec3b>(i,j) = frame.at<Vec3b>(i, j);
+
+				//cout << "L1 distance: "<< L1_distance << " R "<<((Scalar)R.at<float>(i, j))[0]<<endl;
+				//waitKey(100);
+
+				if(L1_distance < ((Scalar)R.at<float>(i, j))[0])
+				{
+					samples_matches++;
+				}
+
+				//cout << "frames" << endl;
+				//imshow("imagen", *next_frame);
+				next_frame++;
+				//waitKey(5000);
+			}
+
+
+			if(samples_matches < matches)
+			{
+				//cout << "Samples match: " << i<<"-"<< j<<" : "<< ((Scalar)mask.at<uchar>(i, j))[0] <<" -- "<<samples_matches << endl;
+				mask.at<uchar>(i, j) = white.at<uchar>(0, 0);
+				//cout << "-->" << ((Scalar)mask.at<uchar>(i, j))[0] << " - "<< ((Scalar)white.at<uchar>(0, 0))[0] <<endl;
+				//waitKey(10);
+			}
+		}
+	}	
 
 	//return extract_LSBP(frame, frame, 0.05);
-	return frame;
+	return mask;
 }
 
 //return calcular los valores singulares y retorna (s[2]+s[1])/s[0]
