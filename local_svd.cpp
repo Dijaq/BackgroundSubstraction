@@ -19,6 +19,7 @@ Mat _SVD_init(Mat frame);
 Mat SVD_step(Mat, int, int, int, double, double);
 double _SVD(arma::mat matriz);// return the singular values sum (s[1]+s[2])/s[0]
 int clip(int i, int inferior, int superior, int val_range);
+int Hamming_distance(Mat svd_frame, Mat svd_sample, int i, int j, double tau);
 
 
 Mat D, fr, lsbp;
@@ -50,7 +51,7 @@ int main()
 	width = img.rows;
 
 	Mat ones = Mat::ones(2, 3, CV_32FC1)*0.2;
-	R = Mat::ones(width, heigth, CV_32FC1)*0.2;
+	R = Mat::ones(width, heigth, CV_32FC1)*3.0;
 	T = Mat::ones(width, heigth, CV_8UC1)*0.08;
 
 	list<Mat> lD;
@@ -78,7 +79,25 @@ int main()
 	Mat result = SVD_init(img, samples);
 	waitKey(1);
 
-	for(int f=2; f<=4; f++)
+	/*list<Mat>::iterator next_f;
+	next_f = samples_frame.begin();
+	while(next_f != samples_frame.end())
+	{
+		cout << "------------------------" << endl;
+		for(int j=0; j<(*next_f).cols; j++)
+		{
+			if(j<10)
+			{
+				cout << "...>" << (*next_f).at<Vec3b>(10,j)<<endl;
+			}
+		}
+		imshow("imagen", *next_f);
+		waitKey(1000);
+		//cout << *next << endl;
+		next_f++;
+	}*/
+
+	for(int f=2; f<=40; f++)
 	{
 		cout << "=========: " << f << endl;
 		//Only to read
@@ -110,7 +129,7 @@ int main()
 
 		Mat result = SVD_step(img, 4, 2, 5, 0.1, 0.02);
 		imshow("imagen", result);
-		waitKey(5000);
+		waitKey(5);
 
 
 		auto t12 = std::chrono::high_resolution_clock::now();
@@ -126,7 +145,7 @@ int main()
 
 //Extrae la matriz de valores singulares SVD (s[1]+s[2])/s[0]
 //intensity_fr with 0 
-void extract_LSBP(Mat frame, Mat &g, int tau=0.05)
+void extract_LSBP(Mat frame, Mat &r_lsbp, int tau=0.05)
 {
 	Mat intensity;
 	cvtColor(frame, intensity, COLOR_BGR2GRAY);
@@ -136,9 +155,16 @@ void extract_LSBP(Mat frame, Mat &g, int tau=0.05)
 	{
 		for(int j=0; j<(frame.cols+2)-1; j++)
 		{
+			//((Scalar)intensity_fr.at<uchar>(i+1,j+1))[0] = ((Scalar)intensity.at<uchar>(i,j))[0]; 
 			intensity_fr.at<uchar>(i+1,j+1) = intensity.at<uchar>(i,j); 
+			//cout << "::::> " <<i<<" - " <<j<<": "<<((Scalar)intensity_fr.at<uchar>(i+1,j+1))[0] << "--"<< ((Scalar)intensity.at<uchar>(i,j))[0]<<endl;
+			//waitKey(10);
 		}
 	}
+
+	/*cout << "LSBP" << endl;
+	imshow("imagen", intensity_fr);
+	waitKey(5000);*/
 	
 
 
@@ -185,13 +211,23 @@ void extract_LSBP(Mat frame, Mat &g, int tau=0.05)
 			((Scalar)intensity_fr.at<uchar>(i+1,j))[0],
 			((Scalar)intensity_fr.at<uchar>(i+1,j+1))[0]}};
 
-			((Scalar)g.at<double>(i,j))[0] = _SVD(m_svd);
+			/*cout << "AAAAAAA: " <<endl;
+			cout << m_svd << endl;
+			waitKey(5000);*/
+
+			//cout << "Double: " << i<< "- "<<j<<_SVD(m_svd) << endl;
+
+			//((Scalar)g.at<double>(i,j))[0] = _SVD(m_svd);
+			//cout << ">>>>>: "<<i <<"-"<<j <<": "<<_SVD(m_svd) << endl;
+			r_lsbp.at<double>(i,j) = _SVD(m_svd);
+			/*cout << "lsbp: "<< r_lsbp.at<double>(i,j) << endl;
+			cout << "SVD: "<<_SVD(m_svd) << endl;*/
 			//cout << m_svd << endl;
 
 			//waitKey(10000);
 
-			//cout << i <<"-"<<j <<": "<<((Scalar)g.at<double>(i,j))[0] << endl;
-			//waitKey(10000);
+			//cout << ">>>>>: "<<i <<"-"<<j <<": "<<((Scalar)g.at<double>(i,j))[0] << endl;
+			//waitKey(100);
 		}
 		
 	}
@@ -199,7 +235,7 @@ void extract_LSBP(Mat frame, Mat &g, int tau=0.05)
 	cout << "Time_ex: " << std::chrono::duration_cast<std::chrono::milliseconds>(t12 - t11).count() << endl;
 
 	intensity_fr.release();
-
+	
 	/*for(int i=1; i<width-1; i++)
 	{
 		for(int j=1; j<heigth-1; j++)
@@ -219,14 +255,18 @@ void extract_LSBP(Mat frame, Mat &g, int tau=0.05)
 
 Mat SVD_init(Mat frame, int samples)
 {
-	Mat svd = Mat::zeros(width+2, heigth+2, CV_8UC1);
+	Mat svd = Mat::zeros(width+2, heigth+2, CV_32FC1);
 	
 	extract_LSBP(frame, svd, 0.05);
+
+	//cout << "Impr1" << endl;
 
 		//Mat result = SVD_step(img); 
 
 	samples_lsbp.push_back(svd);
+	//cout << "Impr2" << endl;
 	samples_frame.push_back(frame);
+	//cout << "Impr3" << endl;
 	int i0, j0;
 
 	for(int k=1; k<samples;k++)
@@ -246,8 +286,12 @@ Mat SVD_init(Mat frame, int samples)
 				i0 = clip(i,10,frame.rows-10,10);
 				j0 = clip(j,10,frame.cols-10,10);
 
-				fr.at<Vec3b>(i0,j0) = frame.at<Vec3b>(i, j);
-				((Scalar)lsbp.at<double>(i0,j0))[0] = ((Scalar)svd.at<double>(i, j))[0]; 
+				fr.at<Vec3b>(i0,j0) = frame.at<Vec3b>(i,j);
+				//((Scalar)fr.at<Vec3b>(i0,j0))[0] = ((Scalar)frame.at<Vec3b>(i, j))[0];
+				//((Scalar)fr.at<Vec3b>(i0,j0))[1] = ((Scalar)frame.at<Vec3b>(i, j))[1];
+				//((Scalar)fr.at<Vec3b>(i0,j0))[2] = ((Scalar)frame.at<Vec3b>(i, j))[2];
+				//((Scalar)lsbp.at<double>(i0,j0))[0] = ((Scalar)svd.at<double>(i, j))[0]; 
+				lsbp.at<double>(i0,j0) = svd.at<double>(i, j); 
 			}
 		}
 
@@ -279,6 +323,9 @@ Mat _SVD_init(Mat frame)
 // matches   threshold PY
 Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr=0.1, double Tlr=0.02)
 {
+	Mat svd = Mat::zeros(frame.rows+2, frame.cols+2, CV_32FC1);
+	extract_LSBP(frame, svd, 0.05);
+
 	Mat white = Mat::ones(1,1, CV_8UC1)*255;
 	Mat mask = Mat::zeros(frame.rows, frame.cols, CV_8UC1);
 	for(int i=0; i<frame.rows; i++)
@@ -288,32 +335,54 @@ Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr
 			list<Mat>::iterator next_frame;
 			next_frame = samples_frame.begin();
 
+			list<Mat>::iterator next_lsbp;
+			next_lsbp = samples_lsbp.begin();
+
 			int samples_matches = 0;
 
 			while(next_frame != samples_frame.end())
 			{
 				//double L1_distance = ((Scalar)(*next_frame).at<Vec3b>(i, j))[0];
 
+				/*double L1_distance = abs(((Scalar)frame.at<Vec3b>(i, j))[0]-((Scalar)(*next_frame).at<Vec3b>(i, j))[0])+
+				abs(((Scalar)frame.at<Vec3b>(i, j))[1]-((Scalar)(*next_frame).at<Vec3b>(i, j))[1])+
+				abs(((Scalar)frame.at<Vec3b>(i, j))[2]-((Scalar)(*next_frame).at<Vec3b>(i, j))[2]);*/
 				double L1_distance = abs(((Scalar)frame.at<Vec3b>(i, j))[0]-((Scalar)(*next_frame).at<Vec3b>(i, j))[0])+
 				abs(((Scalar)frame.at<Vec3b>(i, j))[1]-((Scalar)(*next_frame).at<Vec3b>(i, j))[1])+
 				abs(((Scalar)frame.at<Vec3b>(i, j))[2]-((Scalar)(*next_frame).at<Vec3b>(i, j))[2]);
 
+				int d_hamming = Hamming_distance(svd, *next_lsbp, i+1, j+1, 0.05);
+				//*next_lsbp;
+
 				//fr.at<Vec3b>(i,j) = frame.at<Vec3b>(i, j);
 
-				//cout << "L1 distance: "<< L1_distance << " R "<<((Scalar)R.at<float>(i, j))[0]<<endl;
-				//waitKey(100);
+				/*if(i==10)
+				{
+					if(j<10)
+					{
+						cout << i <<" - "<< j <<" L1 : "<< L1_distance << " R "<<((*next_frame).at<Vec3b>(i, j))<<endl;
+						waitKey(10);
+					}
+				}*/
 
-				if(L1_distance < ((Scalar)R.at<float>(i, j))[0])
+				//if((L1_distance < ((Scalar)R.at<float>(i, j))[0]) && (d_hamming < threshold))							
+				//if((d_hamming < threshold))
+				if((L1_distance < R.at<double>(i, j)))						
 				{
 					samples_matches++;
 				}
+				//cout << i<<" - " << j << ": " << samples_matches<< " -- " << L1_distance<<endl;
+				//waitKey(100);
 
 				//cout << "frames" << endl;
 				//imshow("imagen", *next_frame);
 				next_frame++;
+				next_lsbp++;
 				//waitKey(5000);
 			}
 
+			//cout << "Samples match: " << i<<"-"<< j<<" : "<< ((Scalar)svd.at<uchar>(i,j))[0] << endl;
+			//waitKey(10);
 
 			if(samples_matches < matches)
 			{
@@ -327,6 +396,50 @@ Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr
 
 	//return extract_LSBP(frame, frame, 0.05);
 	return mask;
+}
+
+int Hamming_distance(Mat svd_frame, Mat svd_sample, int i, int j, double tau)
+{
+	int hamming = 0;
+	//if((abs((svd_frame.at<double>(i,j))-(svd_frame.at<double>(i-1,j-1))) < tau))
+	if((abs((svd_frame.at<double>(i,j))-(svd_frame.at<double>(i-1,j-1))) < tau) != (abs((svd_sample.at<double>(i,j))-(svd_sample.at<double>(i-1,j-1))) < tau))
+	{
+		hamming++;
+	}
+	if((abs(svd_frame.at<double>(i,j)-svd_frame.at<double>(i-1,j)) < tau) != (abs(svd_sample.at<double>(i,j)-svd_sample.at<double>(i-1,j)) < tau))
+	{
+		hamming++;
+	}
+	if((abs(svd_frame.at<double>(i,j)-svd_frame.at<double>(i-1,j+1)) < tau) != (abs(svd_sample.at<double>(i,j)-svd_sample.at<double>(i-1,j+1)) < tau))
+	{
+		hamming++;
+	}
+	if((abs(svd_frame.at<double>(i,j)-svd_frame.at<double>(i,j-1)) < tau) != (abs(svd_sample.at<double>(i,j)-svd_sample.at<double>(i,j-1)) < tau))
+	{
+		hamming++;
+	}
+	if((abs(svd_frame.at<double>(i,j)-svd_frame.at<double>(i,j+1)) < tau) != (abs(svd_sample.at<double>(i,j)-svd_sample.at<double>(i,j+1)) < tau))
+	{
+		hamming++;
+	}
+	if((abs(svd_frame.at<double>(i,j)-svd_frame.at<double>(i+1,j-1)) < tau) != (abs(svd_sample.at<double>(i,j)-svd_sample.at<double>(i+1,j-1)) < tau))
+	{
+		hamming++;
+	}
+	if((abs(svd_frame.at<double>(i,j)-svd_frame.at<double>(i+1,j)) < tau) != (abs(svd_sample.at<double>(i,j)-svd_sample.at<double>(i+1,j)) < tau))
+	{
+		hamming++;
+	}
+	if((abs(svd_frame.at<double>(i,j)-svd_frame.at<double>(i+1,j+1)) < tau) != (abs(svd_sample.at<double>(i,j)-svd_sample.at<double>(i+1,j+1)) < tau))
+	{
+		hamming++;
+	}
+
+	//cout << i<<"-"<< j <<": "<<abs(((Scalar)svd_frame.at<double>(i,j))[0]-((Scalar)svd_frame.at<double>(i-1,j-1))[0]) << " - " << abs(((Scalar)svd_sample.at<double>(i,j))[0]-((Scalar)svd_sample.at<double>(i-1,j-1))[0]) << " ham: "<< hamming<<endl;
+	//cout << i<<"-"<< j <<": "<< abs(((Scalar)svd_frame.at<double>(i,j))[0]-((Scalar)svd_frame.at<double>(i-1,j-1))[0]) <<" Bool: "<<(abs(((Scalar)svd_frame.at<double>(i,j))[0]-((Scalar)svd_frame.at<double>(i-1,j-1))[0])<0.05)  << " - " << " ham: "<< hamming<< " tau: " <<tau<<endl;
+	//waitKey(10);
+
+	return hamming;
 }
 
 //return calcular los valores singulares y retorna (s[2]+s[1])/s[0]

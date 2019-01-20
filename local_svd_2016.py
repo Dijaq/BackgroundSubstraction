@@ -72,6 +72,7 @@ def SVD_step(frame, HR=4, threshold=2, Rscale=5, Rlr=0.1, Tlr=0.02):
 	lsbp = extract_LSBP(frame)
 #	Racc = (1.0 - Rlr) * Racc + Rlr * (np.mean(D, axis=0) * Rscale)
 	mask = np.float32(np.sum((np.sum(np.abs(samples_int - frame), axis=3) < Racc) & (np.sum(samples_lsbp ^ lsbp, axis=3) < HR), axis=0) < threshold)
+#	mask = np.float32(np.sum((np.sum(samples_lsbp ^ lsbp, axis=3) < HR), axis=0) < threshold)
 #	print("->", mask.shape)
 #	Tacc = (1.0 - Tlr) * Tacc + Tlr * (1.0 - mask)
 #	Tacc = np.clip(Tacc, 0.05, 0.8)
