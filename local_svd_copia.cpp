@@ -102,7 +102,7 @@ int main()
 		next_f++;
 	}*/
 
-	for(int f=2; f<=40; f++)
+	for(int f=2; f<=100; f++)
 	{
 		cout << "=========: " << f << endl;
 		//Only to read
@@ -365,7 +365,7 @@ Mat _SVD_init(Mat frame, int samples)
 
 //threshold  HR PY
 // matches   threshold PY
-Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr=0.1, double Tlr=0.02)
+Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr=0.05, double Tlr=0.02)
 {
 	//Mat svd_fr = Mat::zeros(frame.rows+2, frame.cols+2, CV_32FC1);
 	Mat svd_fr = Mat::zeros(width+2, heigth+2, CV_32FC1);
@@ -425,14 +425,14 @@ Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr
 			}
 
 			//UPDATE R(x)
-			if(R.at<float>(i, j) > (L1_distance_sum/10)*Rscale)
+			/*if(R.at<float>(i, j) > (L1_distance_sum/10)*Rscale)
 			{
 				R.at<float>(i, j) = R.at<float>(i, j)*(1-Rlr);
 			}
 			else
 			{
 				R.at<float>(i, j) = R.at<float>(i, j)*(1+Rlr);
-			}
+			}*/
 
 			if(samples_matches < matches)
 			{
