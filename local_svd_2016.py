@@ -67,6 +67,7 @@ def SVD_step(frame, HR=4, threshold=2, Rscale=5, Rlr=0.1, Tlr=0.02):
 	lsbp = extract_LSBP(frame)
 	Racc = (1.0 - Rlr) * Racc + Rlr * (np.mean(D, axis=0) * Rscale)
 	mask = np.float32(np.sum((np.sum(np.abs(samples_int - frame), axis=3) < Racc) & (np.sum(samples_lsbp ^ lsbp, axis=3) < HR), axis=0) < threshold)
+	#mask = np.float32(np.sum((np.sum(samples_lsbp ^ lsbp, axis=3) < HR), axis=0) < threshold)
 	Tacc = (1.0 - Tlr) * Tacc + Tlr * (1.0 - mask)
 	Tacc = np.clip(Tacc, 0.05, 0.8)
 	for i in range(H):
@@ -75,8 +76,8 @@ def SVD_step(frame, HR=4, threshold=2, Rscale=5, Rlr=0.1, Tlr=0.02):
 				if random.random() < Tacc[i,j]:
 					k = random.randrange(0, S)
 					dist = np.sum(np.abs(samples_int[:,i,j] - frame[i,j]), axis=1)
-					print(samples_int[1,i,j], "--->",frame[i,j], "<<", np.abs(samples_int[1,i,j] - frame[i,j]))
-					cv2.waitKey(5000);
+					#print(samples_int[1,i,j], "--->",frame[i,j], "<<", np.abs(samples_int[1,i,j] - frame[i,j]))
+					#cv2.waitKey(5000);
 					dist.sort()
 					D[k,i,j] = dist[1]
 					samples_int[k,i,j] = frame[i,j]

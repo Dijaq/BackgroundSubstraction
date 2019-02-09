@@ -21,8 +21,10 @@ Mat SVD_step(Mat, int, int, int, double, double);
 double _SVD(arma::mat matriz);// return the singular values sum (s[1]+s[2])/s[0]
 int clip(int i, int inferior, int superior, int val_range);
 int Hamming_distance(Mat svd_frame, Mat svd_sample, int i, int j, double tau);
-void export_mat_excel(Mat img);
+void export_mat_excel(Mat img, string name);
 void update_samples_lsbp();
+double get_distance_L1(double b1, double b2, double g1, double g2, double r1, double r2);
+double min_distance_L1(double b1, double b2, double g1, double g2, double r1, double r2);
 
 
 Mat D, fr, lsbp;
@@ -55,28 +57,29 @@ int main()
 	width = img.rows;
 
 	Mat ones = Mat::ones(2, 3, CV_32FC1)*0.2;
-	R = Mat::ones(width, heigth, CV_32FC1)*80.0;
+	R = Mat::ones(width, heigth, CV_32FC1)*30.0;
+	D = Mat::ones(width, heigth, CV_32FC1)*0.0;
 	
 	T = Mat::ones(width, heigth, CV_8UC1)*0.08;
 
-	list<Mat> lD;
+	/*list<Mat> lD;
 	for(int s=0; s<samples; s++)
 	{
 		D = Mat::ones(2, 2, CV_32F)*0.2;
 		lD.push_back(D);
-	}
+	}*/
 
 //Size of the list
 //	cout << lD.size() << endl;
 
 //Print all the elements of the list
-	list<Mat>::iterator next;
+	/*list<Mat>::iterator next;
 	next = lD.begin();
 	while(next != lD.end())
 	{
 		//cout << *next << endl;
 		next++;
-	}
+	}*/
 
 
 	namedWindow("imagen", WINDOW_AUTOSIZE);
@@ -102,7 +105,7 @@ int main()
 		next_f++;
 	}*/
 
-	for(int f=2; f<=100; f++)
+	for(int f=2; f<=500; f++)
 	{
 		cout << "=========: " << f << endl;
 		//Only to read
@@ -132,7 +135,9 @@ int main()
 			waitKey(5000);
 		}*/
 
-		Mat result = SVD_step(img, 5, 2, 5, 0.1, 0.02);
+		Mat result = SVD_step(img, 6, 2, 5, 0.05, 0.02);
+		//export_mat_excel(R, "R");
+		//export_mat_excel(D, "D");
 		/*SVD_step(img, 5, 2, 5, 0.1, 0.02);
 
 		list<Mat>::iterator result_frame;
@@ -156,10 +161,10 @@ int main()
 }
 
 
-void export_mat_excel(Mat img)
+void export_mat_excel(Mat img, string name)
 {
 	ofstream myfile;
-  	myfile.open("example.csv");
+  	myfile.open(name+".csv");
 	for(int i=0; i<img.rows; i++)
 	{
 		for(int j=0; j<img.cols; j++)
@@ -175,7 +180,7 @@ void export_mat_excel(Mat img)
 
 	}
 	myfile.close();
-	waitKey(5000);
+	//waitKey(5000);
 }
 
 
@@ -386,18 +391,28 @@ Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr
 			next_lsbp = samples_lsbp.begin();
 
 			int samples_matches = 0;
-			double L1_distance_sum = 0;
+			double min_distance_sum = 0;
 			//double L1_distance_min = 1000000;
 
 			while(next_lsbp != samples_lsbp.end())
 			{
-				double L1_distance = abs(((Scalar)frame.at<Vec3b>(i, j))[0]-((Scalar)(*next_frame).at<Vec3b>(i, j))[0])+
-				abs(((Scalar)frame.at<Vec3b>(i, j))[1]-((Scalar)(*next_frame).at<Vec3b>(i, j))[1])+
-				abs(((Scalar)frame.at<Vec3b>(i, j))[2]-((Scalar)(*next_frame).at<Vec3b>(i, j))[2]);
+				/*double L1_distance_anterior = pow(abs(((Scalar)frame.at<Vec3b>(i, j))[0]-((Scalar)(*next_frame).at<Vec3b>(i, j))[0]),2)+
+				pow(abs(((Scalar)frame.at<Vec3b>(i, j))[1]-((Scalar)(*next_frame).at<Vec3b>(i, j))[1]),2)+
+				pow(abs(((Scalar)frame.at<Vec3b>(i, j))[2]-((Scalar)(*next_frame).at<Vec3b>(i, j))[2]),2);*/
 
+				double L1_distance = 
+				get_distance_L1(((Scalar)frame.at<Vec3b>(i, j))[0], ((Scalar)(*next_frame).at<Vec3b>(i, j))[0],
+					((Scalar)frame.at<Vec3b>(i, j))[1], ((Scalar)(*next_frame).at<Vec3b>(i, j))[1],
+					((Scalar)frame.at<Vec3b>(i, j))[2], ((Scalar)(*next_frame).at<Vec3b>(i, j))[2]);
+
+				double min_distance = 
+				min_distance_L1(((Scalar)frame.at<Vec3b>(i, j))[0], ((Scalar)(*next_frame).at<Vec3b>(i, j))[0],
+					((Scalar)frame.at<Vec3b>(i, j))[1], ((Scalar)(*next_frame).at<Vec3b>(i, j))[1],
+					((Scalar)frame.at<Vec3b>(i, j))[2], ((Scalar)(*next_frame).at<Vec3b>(i, j))[2]);
+				
 				int d_hamming = Hamming_distance(svd_fr, *next_lsbp, i+1, j+1, 0.05);
 		
-				L1_distance_sum += L1_distance;
+				min_distance_sum += min_distance;
 				//if(!((L1_distance < R.at<double>(i, j)) && (d_hamming < (threshold-1))))	
 
 				//UPDATE R
@@ -409,6 +424,11 @@ Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr
 					L1_distance_min = L1_distance;
 				}*/
 
+				D.at<float>(i,j) = L1_distance;
+
+				//cout << "->"<<L1_distance << endl;
+
+				//if((d_hamming < (threshold)))						
 				if((L1_distance < R.at<float>(i, j)) && (d_hamming < (threshold)))						
 				{
 					samples_matches++;			
@@ -425,36 +445,57 @@ Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr
 			}
 
 			//UPDATE R(x)
-			/*if(R.at<float>(i, j) > (L1_distance_sum/10)*Rscale)
+			if(R.at<float>(i, j) > ((min_distance_sum/10)*Rscale))
 			{
-				R.at<float>(i, j) = R.at<float>(i, j)*(1-Rlr);
+				if(R.at<float>(i, j)*(1-Rlr) < 18)
+					R.at<float>(i, j) = 18;
+				else
+					R.at<float>(i, j) = R.at<float>(i, j)*(1-Rlr);
 			}
 			else
 			{
-				R.at<float>(i, j) = R.at<float>(i, j)*(1+Rlr);
-			}*/
+				if(R.at<float>(i, j)*(1+Rlr) > 500)
+					R.at<float>(i, j) = 500;
+				else
+					R.at<float>(i, j) = R.at<float>(i, j)*(1+Rlr);
+			}
 
 			if(samples_matches < matches)
 			{
-				mask.at<uchar>(i, j) = 255;
+				mask.at<uchar>(i, j) = 255;//White, Black 0
+
+				//UPDATE T(X)
+				if(T.at<uchar>(i, j)+(1/(min_distance_sum/10)) < 200)
+					T.at<uchar>(i, j) = T.at<uchar>(i, j)+(1/(min_distance_sum/10));//IF FOREGROUND
+				else
+					T.at<uchar>(i, j) = 200;
 			}
 			else
 			{
+				//UPDATE T(X)
+				if(T.at<uchar>(i, j)-(0.05/(min_distance_sum/10)) > 2)
+					T.at<uchar>(i, j) = T.at<uchar>(i, j)-(0.05/(min_distance_sum/10));//IF BACKGROUND
+				else
+					T.at<uchar>(i, j) = 2;
+
 				//UPDATE B(X) because mask(i,j) is 0
-				int random = rand()%10;
-				
-				list<Mat>::iterator next_frame_update;
-				next_frame_update = samples_frame.begin();
-
-				list<Mat>::iterator next_lsbp_update;
-				next_lsbp_update = samples_lsbp.begin();
-
-				for(int i=0; i<random; i++)
+				if((rand()%200) < (200/T.at<uchar>(i, j)))
 				{
-					next_frame_update++;
-					next_lsbp_update++;
+					int random = rand()%10;
+					
+					list<Mat>::iterator next_frame_update;
+					next_frame_update = samples_frame.begin();
+
+					list<Mat>::iterator next_lsbp_update;
+					next_lsbp_update = samples_lsbp.begin();
+
+					for(int i=0; i<random; i++)
+					{
+						next_frame_update++;
+						next_lsbp_update++;
+					}
+					(*next_frame_update).at<Vec3b>(i, j) = frame.at<Vec3b>(i,j);
 				}
-				(*next_frame_update).at<Vec3b>(i, j) = frame.at<Vec3b>(i,j);
 				//(*next_lsbp_update).at<float>(i, j) = frame.at<float>(i,j);
 			}
 		}
@@ -465,6 +506,33 @@ Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr
 
 	return mask;
 
+}
+
+double get_distance_L1(double b1, double b2, double g1, double g2, double r1, double r2)
+{
+	return sqrt(pow((b1-b2),2)+pow((g1-g2),2)+pow((r1-r2),2));
+}
+
+double min_distance_L1(double b1, double b2, double g1, double g2, double r1, double r2)
+{
+	if(abs(b1-b2) < abs(g1-g2))
+	{
+		if(abs(r1-r2) < abs(b1-b2))
+		{
+			return abs(r1-r2);
+		}
+		else
+			return abs(b1-b2);
+	}
+	else
+	{
+		if(abs(r1-r2) < abs(g1-g2))
+		{
+			return abs(r1-r2);
+		}
+		else
+			return abs(g1-g2);
+	}
 }
 
 void update_samples_lsbp()
