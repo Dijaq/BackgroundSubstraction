@@ -15,6 +15,8 @@ using namespace cv;
 
 namespace fs = std::experimental::filesystem::v1;
 
+#define THREAD_MAX 4
+
 void extract_LSBP(Mat frame, Mat &output, int tau);
 void extract_LSBP_v2(Mat frame, Mat change_frame, Mat last_lsbp, Mat &output, int tau);
 Mat SVD_init(Mat frame, int samples);
@@ -30,9 +32,10 @@ double min_distance_L1(double b1, double b2, double g1, double g2, double r1, do
 void init_change_lsbp();
 void init_zeros_change_lsbp();
 bool validate_change(float, float, float, float, float, float, float, float, float);
+void* LSBP_parallel(void* arg);
 
-
-
+Mat global_intensity_fr, global_change_frame, global_last_lsbp, global_output;
+int part=0;
 Mat D, fr, lsbp;
 Mat R, T;
 list<Mat> samples_lsbp;
@@ -42,7 +45,7 @@ int heigth, width;
 
 int main()
 {
-	string PATH = "busStation/";
+	string PATH = "highway/";
 	srand(time(NULL));
 	auto duration =0;
 
@@ -60,7 +63,7 @@ int main()
 	cout << "Hola c++" << endl;*/
 
 	Mat img;
-	img = imread(PATH+"input/in000350.jpg", CV_LOAD_IMAGE_COLOR);
+	img = imread(PATH+"input/in000001.jpg", CV_LOAD_IMAGE_COLOR);
 	heigth = img.cols;
 	width = img.rows;
 
@@ -115,7 +118,7 @@ int main()
 
 	init_change_lsbp();
 
-	for(int f=351; f<=1699; f++)
+	for(int f=2; f<=1699; f++)
 	{
 		cout << "=========: " << f << endl;
 		//Only to read
@@ -594,15 +597,12 @@ double min_distance_L1(double b1, double b2, double g1, double g2, double r1, do
 }
 */
 
-void extract_LSBP_v2(Mat frame, Mat frame_change, Mat last_lsbp,Mat &r_lsbp, int tau=0.05)
+/*void extract_LSBP_v2(Mat frame, Mat frame_change, Mat last_lsbp,Mat &r_lsbp, int tau=0.05)
 {
-	//export_mat_excel(frame_change, "change_v2");
-	//Mat other = Mat::zeros(width+2, heigth+2, CV_32FC1);
 	Mat intensity;
 	cvtColor(frame, intensity, COLOR_BGR2GRAY);
 	Mat intensity_fr = Mat::zeros(frame.rows+2, frame.cols+2, CV_8UC1);
 
-//#pragma omp parallell for
 	for(int i=1; i<intensity_fr.rows-1; i++)
 	{
 		for(int j=1; j<intensity_fr.cols-1; j++)
@@ -611,13 +611,6 @@ void extract_LSBP_v2(Mat frame, Mat frame_change, Mat last_lsbp,Mat &r_lsbp, int
 		}
 	}
 
-	//imshow("imagen", intensity_fr);
-	//waitKey(5000);
-
-
-//SVD descomposicion
-
-#pragma omp parallell for
 	for(int i=1; i<intensity_fr.rows-1; i++)
 	{
 		for(int j=1; j<intensity_fr.cols-1; j++)
@@ -648,10 +641,92 @@ void extract_LSBP_v2(Mat frame, Mat frame_change, Mat last_lsbp,Mat &r_lsbp, int
 		}	
 		
 	}
-	//cout << "Time_ex: " << std::chrono::duration_cast<std::chrono::milliseconds>(t12 - t11).count() << endl;
 
 	intensity_fr.release();
 	
+}*/
+
+void extract_LSBP_v2(Mat frame, Mat frame_change, Mat last_lsbp,Mat &r_lsbp, int tau=0.05)
+{
+	Mat intensity;
+	cvtColor(frame, intensity, COLOR_BGR2GRAY);
+	Mat intensity_fr = Mat::zeros(frame.rows+2, frame.cols+2, CV_8UC1);
+
+	for(int i=1; i<intensity_fr.rows-1; i++)
+	{
+		for(int j=1; j<intensity_fr.cols-1; j++)
+		{
+			intensity_fr.at<uchar>(i,j) = intensity.at<uchar>(i-1,j-1); 
+		}
+	}
+
+	part=0;
+	global_intensity_fr = intensity_fr.clone();
+	global_change_frame = frame_change.clone();
+	global_last_lsbp = last_lsbp.clone();
+	global_output = r_lsbp.clone();
+
+	pthread_t threads[THREAD_MAX];
+
+    for (int i = 0; i < THREAD_MAX; i++)
+    pthread_create(&threads[i], NULL, LSBP_parallel,
+                            (void*)NULL);
+    //quick_sort(aa.begin(), aa.end());
+
+    for (int i = 0; i < THREAD_MAX; i++)
+    pthread_join(threads[i], NULL);
+
+	r_lsbp = global_output.clone();
+
+	intensity_fr.release();
+	
+}
+
+void* LSBP_parallel(void* arg)
+{
+    int thread_part = part++;
+  
+    /*for(int i=0; i<global_mat.rows/THREAD_MAX; i++)
+    {
+        for(int j=0; j<global_mat.cols; j++)
+        {
+            global_mat.at<float>((global_mat.rows/THREAD_MAX)*thread_part+i,j) = 1;
+        }
+    }*/
+   
+    for(int k=1; k<((global_intensity_fr.rows-2)/THREAD_MAX)+1; k++)
+	{
+		int i = ((global_intensity_fr.rows-2)/THREAD_MAX)*thread_part+k;
+		//cout << "thread: " << thread_part <<" i: " << i << endl;
+		for(int j=1; j<global_intensity_fr.cols-1; j++)
+		{
+			if(validate_change(global_change_frame.at<float>(i-1,j-1), global_change_frame.at<float>(i-1,j), global_change_frame.at<float>(i-1,j+1),
+				global_change_frame.at<float>(i,j-1), global_change_frame.at<float>(i,j), global_change_frame.at<float>(i,j+1),
+				global_change_frame.at<float>(i+1,j-1), global_change_frame.at<float>(i+1,j), global_change_frame.at<float>(i+1,j+1)))
+			{
+				arma::mat m_svd;
+				m_svd = {{((Scalar)global_intensity_fr.at<uchar>(i-1,j-1))[0],
+				((Scalar)global_intensity_fr.at<uchar>(i-1,j))[0],
+				((Scalar)global_intensity_fr.at<uchar>(i-1,j+1))[0]},
+
+				{((Scalar)global_intensity_fr.at<uchar>(i,j-1))[0],
+				((Scalar)global_intensity_fr.at<uchar>(i,j))[0],
+				((Scalar)global_intensity_fr.at<uchar>(i,j+1))[0]},
+
+				{((Scalar)global_intensity_fr.at<uchar>(i+1,j-1))[0],
+				((Scalar)global_intensity_fr.at<uchar>(i+1,j))[0],
+				((Scalar)global_intensity_fr.at<uchar>(i+1,j+1))[0]}};
+
+				global_output.at<float>(i,j) = _SVD(m_svd);
+			}
+			else
+			{
+				global_output.at<float>(i,j) = global_last_lsbp.at<float>(i,j);
+			}
+		}	
+		
+	}
+ 
 }
 
 bool validate_change(float i00, float i01, float i02, float i10, float i11, float i12, float i20, float i21, float i22)
