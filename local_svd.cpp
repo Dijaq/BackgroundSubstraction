@@ -33,6 +33,7 @@ void init_change_lsbp();
 void init_zeros_change_lsbp();
 bool validate_change(float, float, float, float, float, float, float, float, float);
 void* LSBP_parallel(void* arg);
+void* LSBP1_parallel(void* arg);
 
 Mat global_intensity_fr, global_change_frame, global_last_lsbp, global_output;
 int part=0;
@@ -199,14 +200,12 @@ void export_mat_excel(Mat img, string name)
 
 //Extrae la matriz de valores singulares SVD (s[1]+s[2])/s[0]
 //intensity_fr with 0 
-void extract_LSBP(Mat frame, Mat &r_lsbp, int tau=0.05)
+/*void extract_LSBP(Mat frame, Mat &r_lsbp, int tau=0.05)
 {
-	//Mat other = Mat::zeros(width+2, heigth+2, CV_32FC1);
 	Mat intensity;
 	cvtColor(frame, intensity, COLOR_BGR2GRAY);
 	Mat intensity_fr = Mat::zeros(frame.rows+2, frame.cols+2, CV_8UC1);
 
-//#pragma omp parallell for
 	for(int i=1; i<intensity_fr.rows-1; i++)
 	{
 		for(int j=1; j<intensity_fr.cols-1; j++)
@@ -215,14 +214,8 @@ void extract_LSBP(Mat frame, Mat &r_lsbp, int tau=0.05)
 		}
 	}
 
-	//imshow("imagen", intensity_fr);
-	//waitKey(5000);
-
-
-//SVD descomposicion
 	auto t11 = std::chrono::high_resolution_clock::now();
 
-#pragma omp parallell for
 	for(int i=1; i<intensity_fr.rows-1; i++)
 	{
 		for(int j=1; j<intensity_fr.cols-1; j++)
@@ -240,56 +233,76 @@ void extract_LSBP(Mat frame, Mat &r_lsbp, int tau=0.05)
 			((Scalar)intensity_fr.at<uchar>(i+1,j))[0],
 			((Scalar)intensity_fr.at<uchar>(i+1,j+1))[0]}};
 
-			r_lsbp.at<float>(i,j) = _SVD(m_svd);
-
-			/*if(j == 1)
-			{
-				ofstream myfile;
-			  	myfile.open("example.csv");
-				for(int i=0; i<r_lsbp.rows; i++)
-				{
-					for(int j=0; j<r_lsbp.cols; j++)
-					{
-						if(i==2 && j==1)
-							cout << "print: " << ((Scalar)r_lsbp.at<double>(i,j))[0] << endl;
-						myfile << ((Scalar)r_lsbp.at<double>(i, j))[0];
-						myfile << ",";
-					}
-					myfile << "\n";
-				}
-				
-				imshow("imagen", intensity_fr);
-					//cout << "-> " << ((Scalar)mask.at<uchar>(15, j))[0] << endl;
-				myfile.close();
-				waitKey(5000);
-			}*/
-			/*if(i==2 && j==1)
-			{
-				cout << "SVD: "<<_SVD(m_svd) << endl;
-				cout << "lsbp: " << r_lsbp.at<double>(i,j) << endl;
-				cout << i <<" - "<<j<< " : "<<((Scalar)intensity_fr.at<uchar>(i-1,j-1))[0]<<endl;
-				cout << i <<" - "<<j<< " : "<<((Scalar)intensity_fr.at<uchar>(i-1,j))[0]<<endl;
-				cout << i <<" - "<<j<< " : "<<((Scalar)intensity_fr.at<uchar>(i-1,j+1))[0]<<endl;
-				cout << i <<" - "<<j<< " : "<<((Scalar)intensity_fr.at<uchar>(i,j-1))[0]<<endl;
-				cout << i <<" - "<<j<< " : "<<((Scalar)intensity_fr.at<uchar>(i,j))[0]<<endl;
-				cout << i <<" - "<<j<< " : "<<((Scalar)intensity_fr.at<uchar>(i,j+1))[0]<<endl;
-				cout << i <<" - "<<j<< " : "<<((Scalar)intensity_fr.at<uchar>(i+1,j-1))[0]<<endl;
-				cout << i <<" - "<<j<< " : "<<((Scalar)intensity_fr.at<uchar>(i+1,j))[0]<<endl;
-				cout << i <<" - "<<j<< " : "<<((Scalar)intensity_fr.at<uchar>(i+1,j+1))[0]<<endl;
-				waitKey(5000);
-			}*/
-			//cout << ">>>>>: "<<i <<"-"<<j <<": "<<((Scalar)g.at<double>(i,j))[0] << endl;
-			
+			r_lsbp.at<float>(i,j) = _SVD(m_svd);	
 		}
-
-		
 		
 	}
 	auto t12 = std::chrono::high_resolution_clock::now();
-	//cout << "Time_ex: " << std::chrono::duration_cast<std::chrono::milliseconds>(t12 - t11).count() << endl;
 
 	intensity_fr.release();
-	
+}*/
+
+void extract_LSBP(Mat frame, Mat &r_lsbp, int tau=0.05)
+{
+	Mat intensity;
+	cvtColor(frame, intensity, COLOR_BGR2GRAY);
+	Mat intensity_fr = Mat::zeros(frame.rows+2, frame.cols+2, CV_8UC1);
+
+	for(int i=1; i<intensity_fr.rows-1; i++)
+	{
+		for(int j=1; j<intensity_fr.cols-1; j++)
+		{
+			intensity_fr.at<uchar>(i,j) = intensity.at<uchar>(i-1,j-1); 
+		}
+	}
+
+	global_intensity_fr = intensity_fr.clone();
+	global_output = r_lsbp.clone();
+	part = 0;
+
+	pthread_t threads[THREAD_MAX];
+
+    for (int i = 0; i < THREAD_MAX; i++)
+    pthread_create(&threads[i], NULL, LSBP1_parallel,
+                            (void*)NULL);
+    //quick_sort(aa.begin(), aa.end());
+
+    for (int i = 0; i < THREAD_MAX; i++)
+    pthread_join(threads[i], NULL);
+
+
+	r_lsbp = global_output.clone();
+
+	intensity_fr.release();
+}
+
+void* LSBP1_parallel(void* arg)
+{
+    int thread_part = part++;
+
+	for(int k=1; k<((global_intensity_fr.rows-2)/THREAD_MAX)+1; k++)
+	{
+		int i = ((global_intensity_fr.rows-2)/THREAD_MAX)*thread_part+k;
+		for(int j=1; j<global_intensity_fr.cols-1; j++)
+		{
+			arma::mat m_svd;
+			m_svd = {{((Scalar)global_intensity_fr.at<uchar>(i-1,j-1))[0],
+			((Scalar)global_intensity_fr.at<uchar>(i-1,j))[0],
+			((Scalar)global_intensity_fr.at<uchar>(i-1,j+1))[0]},
+
+			{((Scalar)global_intensity_fr.at<uchar>(i,j-1))[0],
+			((Scalar)global_intensity_fr.at<uchar>(i,j))[0],
+			((Scalar)global_intensity_fr.at<uchar>(i,j+1))[0]},
+
+			{((Scalar)global_intensity_fr.at<uchar>(i+1,j-1))[0],
+			((Scalar)global_intensity_fr.at<uchar>(i+1,j))[0],
+			((Scalar)global_intensity_fr.at<uchar>(i+1,j+1))[0]}};
+
+			global_output.at<float>(i,j) = _SVD(m_svd);	
+		}
+		
+	}
+ 
 }
 
 Mat SVD_init(Mat frame, int samples)
