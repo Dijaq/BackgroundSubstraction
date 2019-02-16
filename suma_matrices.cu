@@ -8,8 +8,8 @@
 
 #define T 10 // max threads x bloque
 #define N 20
-#define filas 3
-#define columnas 3
+#define filas 10
+#define columnas 10
 
 using namespace std;
 
@@ -20,30 +20,21 @@ __global__ void sumaMatrices(int *m1, int *m2, int *m3) {
 
   int indiceij = fil * columnas + col;
 
-  int indicei0j0 = (fil-1) * columnas + (col-1);
+  /*int indicei0j0 = (fil-1) * columnas + (col-1);
   int indicei0j1 = (fil-1) * columnas + (col-1);
   int indicei0j2 = (fil-1) * columnas + (col-1);
   int indicei1j0 = fil * columnas + col;
   int indicei1j2 = fil * columnas + col;
   int indicei2j0 = (fil+1) * columnas + (col+1);
   int indicei2j1 = (fil+1) * columnas + (col+1);
-  int indicei2j2 = (fil+1) * columnas + (col+1);
+  int indicei2j2 = (fil+1) * columnas + (col+1);*/
 
 
   if (col < columnas && fil < filas) {
   // debido a que en los últimos bloques no se realizan todos los threads
    // m3[indice] = m1[indice] + m2[indice];
+      m3[indiceij] = m1[indiceij]+m2[indiceij];
 
-    arma::mat m_svd;
-    m_svd = {{(double)m1[indicei0j0], (double)m1[indicei0j1], (double)m1[indicei0j2]},
-    {(double)m1[indicei1j0], (double)m1[indiceij], (double)m1[indicei1j2]},
-    {(double)m1[indicei2j0], (double)m1[indicei2j1], (double)m1[indicei2j2]}};
-
-    arma::mat U2, V2;
-    arma::vec w2;
-    
-    arma::svd(U2, w2, V2, m_svd);
-    m3[indiceij] = (w2[2]+w2[1])/w2[0];
   }
 }
 
