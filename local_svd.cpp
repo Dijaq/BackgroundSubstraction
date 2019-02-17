@@ -119,7 +119,7 @@ int heigth, width;
 
 int main()
 {
-	string PATH = "highway/";
+	string PATH = "badminton/";
 	srand(time(NULL));
 	auto duration =0;
 
@@ -423,7 +423,11 @@ Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr
 {
 	//Mat svd_fr = Mat::zeros(frame.rows+2, frame.cols+2, CV_32FC1);
 	Mat svd_fr = Mat::zeros(width+2, heigth+2, CV_32FC1);
+
+	auto t11 = std::chrono::high_resolution_clock::now();
 	extract_LSBP(frame, svd_fr, 0.05);
+	auto t12 = std::chrono::high_resolution_clock::now();
+	cout << "LSBP STEP: "<<std::chrono::duration_cast<std::chrono::milliseconds>(t12 - t11).count() << endl;
 
 	Mat mask = Mat::zeros(frame.rows, frame.cols, CV_8UC1);
 	
@@ -537,7 +541,10 @@ Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr
 		
 	}	
 	
+	auto t21 = std::chrono::high_resolution_clock::now();
 	update_samples_lsbp();
+	auto t22 = std::chrono::high_resolution_clock::now();
+	cout << "UPDATE LSBP: "<<std::chrono::duration_cast<std::chrono::milliseconds>(t22 - t21).count() << endl;
 	
 	init_zeros_change_lsbp();
 
