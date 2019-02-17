@@ -119,14 +119,14 @@ int heigth, width;
 
 int main()
 {
-	string PATH = "badminton/";
+	string PATH = "office/";
 	srand(time(NULL));
 	auto duration =0;
 
 	int samples = 10;
 
 	Mat img;
-	img = imread(PATH+"input/in000001.jpg", CV_LOAD_IMAGE_COLOR);
+	img = imread(PATH+"input/in000570.jpg", CV_LOAD_IMAGE_COLOR);
 	heigth = img.cols;
 	width = img.rows;
 
@@ -143,7 +143,7 @@ int main()
 
 	init_change_lsbp();
 
-	for(int f=2; f<=1699; f++)
+	for(int f=571; f<=1699; f++)
 	{
 		cout << "=========: " << f << endl;
 		//Only to read
@@ -427,7 +427,7 @@ Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr
 	auto t11 = std::chrono::high_resolution_clock::now();
 	extract_LSBP(frame, svd_fr, 0.05);
 	auto t12 = std::chrono::high_resolution_clock::now();
-	cout << "LSBP STEP: "<<std::chrono::duration_cast<std::chrono::milliseconds>(t12 - t11).count() << endl;
+	//cout << "LSBP STEP: "<<std::chrono::duration_cast<std::chrono::milliseconds>(t12 - t11).count() << endl;
 
 	Mat mask = Mat::zeros(frame.rows, frame.cols, CV_8UC1);
 	

@@ -81,7 +81,8 @@ __global__ void add(float *m1, float *m3, int filas, int columnas)
     /*m3[indexij] = m1[indexi0j0]+m1[indexi0j1]+m1[indexi0j2]+
       m1[indexi1j0]+m1[indexij]+m1[indexi1j2]+
       m1[indexi2j0]+m1[indexi2j1]+m1[indexi2j2];*/
-    m3[indexij] = s11+s22+s33;
+    //m3[indexij] = s11+s22+s33;
+    m3[indexij] = (s22+s33)/s11;
   }
 }
 
@@ -169,7 +170,7 @@ int heigth, width;
 
 int main()
 {
-  string PATH = "badminton/";
+  string PATH = "streetLight/";
   srand(time(NULL));
   auto duration =0;
 
