@@ -18,7 +18,7 @@ using namespace cv;
 namespace fs = std::experimental::filesystem::v1;
 
 #define THREAD_MAX 4
-#define Threads 16
+#define Threads 32
 
 void extract_LSBP(Mat frame, Mat &output, int tau);
 void extract_LSBP_v2(Mat frame, Mat change_frame, Mat last_lsbp, Mat &output, int tau);
@@ -446,11 +446,11 @@ Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr
   //Mat svd_fr = Mat::zeros(frame.rows+2, frame.cols+2, CV_32FC1);
   Mat svd_fr = Mat::zeros(width+2, heigth+2, CV_32FC1);
 
-  auto t11 = std::chrono::high_resolution_clock::now();
+  //auto t11 = std::chrono::high_resolution_clock::now();
   //extract_LSBP(frame, svd_fr, 0.05);
   extract_LSBP_cuda(frame, svd_fr);
-  auto t12 = std::chrono::high_resolution_clock::now();
-  cout << "LSBP STEP: "<<std::chrono::duration_cast<std::chrono::milliseconds>(t12 - t11).count() << endl;
+  //auto t12 = std::chrono::high_resolution_clock::now();
+  //cout << "LSBP STEP: "<<std::chrono::duration_cast<std::chrono::milliseconds>(t12 - t11).count() << endl;
 
   Mat mask = Mat::zeros(frame.rows, frame.cols, CV_8UC1);
   
@@ -458,6 +458,7 @@ Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr
 //#pragma omp parallell for
   
   
+  auto t21 = std::chrono::high_resolution_clock::now();
   for(int i=0; i<frame.rows; i++)
   {
     for(int j=0; j<frame.cols; j++)
@@ -547,27 +548,23 @@ Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr
           list<Mat>::iterator next_lsbp_update;
           next_lsbp_update = samples_lsbp.begin();
 
-          list<Mat>::iterator next_change_lsbp_update;
-          next_change_lsbp_update = samples_change_lsbp.begin();
-
           for(int k=0; k<random; k++)
           {
             next_frame_update++;
             next_lsbp_update++;
-            next_change_lsbp_update++;
+ 
           }
           (*next_frame_update).at<Vec3b>(i, j) = frame.at<Vec3b>(i,j);
-          (*next_change_lsbp_update).at<float>(i+1, j+1) = 1;
+  
         }
       }
     }
     
   } 
   
-  auto t21 = std::chrono::high_resolution_clock::now();
-  update_samples_lsbp();
   auto t22 = std::chrono::high_resolution_clock::now();
-  cout << "UPDATE LSBP: "<<std::chrono::duration_cast<std::chrono::milliseconds>(t22 - t21).count() << endl;
+  cout << "COMPARE: "<<std::chrono::duration_cast<std::chrono::milliseconds>(t22 - t21).count() << endl;
+  update_samples_lsbp();
   
   init_zeros_change_lsbp();
 
