@@ -119,7 +119,7 @@ int heigth, width;
 
 int main()
 {
-	string PATH = "peopleInShade/";
+	string PATH = "highway/";
 	srand(time(NULL));
 	auto duration =0;
 

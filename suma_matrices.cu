@@ -1,117 +1,118 @@
 #include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <cuda_runtime.h>
-#include <cuda.h>
-#include <math.h>
-#include <armadillo>
+#include "svd3_cuda.h"
+#include "stdio.h"
+#include <chrono>
 
-#define T 10 // max threads x bloque
-#define N 20
-#define filas 10
-#define columnas 10
+//#define columnas 640
+//#define filas 480
+//#define columnas 800
+//#define filas 800
+
+#define Threads 16
 
 using namespace std;
 
-__global__ void sumaMatrices(int *m1, int *m2, int *m3) {
+__global__ void add(int *m1, int *m2, float *m3, int filas, int columnas)
+{
+  int col = blockIdx.x*blockDim.x+threadIdx.x;
+  int fil = blockIdx.y*blockDim.y+threadIdx.y;
 
-  int col = blockIdx.x * blockDim.x + threadIdx.x;
-  int fil = blockIdx.y * blockDim.y + threadIdx.y;
+  int col_min = col-1;
+  int col_max = col+1;
 
-  int indiceij = fil * columnas + col;
-
-  /*int indicei0j0 = (fil-1) * columnas + (col-1);
-  int indicei0j1 = (fil-1) * columnas + (col-1);
-  int indicei0j2 = (fil-1) * columnas + (col-1);
-  int indicei1j0 = fil * columnas + col;
-  int indicei1j2 = fil * columnas + col;
-  int indicei2j0 = (fil+1) * columnas + (col+1);
-  int indicei2j1 = (fil+1) * columnas + (col+1);
-  int indicei2j2 = (fil+1) * columnas + (col+1);*/
+  int fil_min = fil-1;
+  int fil_max = fil+1;
 
 
-  if (col < columnas && fil < filas) {
-  // debido a que en los últimos bloques no se realizan todos los threads
-   // m3[indice] = m1[indice] + m2[indice];
-      m3[indiceij] = m1[indiceij]+m2[indiceij];
+  if(col < columnas && fil < filas && col_min >= 0 && fil_min >= 0 && fil_max < (filas) && col_max < (columnas))
+  {
+    int indexi0j0 = (columnas*fil_min)+col_min;
+    int indexi0j1 = (columnas*fil_min)+col;
+    int indexi0j2 = (columnas*fil_min)+col_max;
+    int indexi1j0 = (columnas*fil)+col_min;
+    int indexij = (columnas*fil)+col;
+    int indexi1j2 = (columnas*fil)+col_max;
+    int indexi2j0 = (columnas*fil_max)+col_min;
+    int indexi2j1 = (columnas*fil_max)+col;
+    int indexi2j2 = (columnas*fil_max)+col_max;
 
+    float u11, u12, u13, u21, u22, u23, u31, u32, u33;
+    float s11, s12, s13, s21, s22, s23, s31, s32, s33;
+    float v11, v12, v13, v21, v22, v23, v31, v32, v33;
+
+    svd(m1[indexi0j0], m1[indexi0j1], m1[indexi0j2],
+        m1[indexi1j0], m1[indexij], m1[indexi1j2],
+        m1[indexi2j0], m1[indexi2j1], m1[indexi2j2],
+        // output U
+        u11, u12, u13, u21, u22, u23, u31, u32, u33,
+        // output S
+        s11, s12, s13, s21, s22, s23, s31, s32, s33,
+        // output V
+        v11, v12, v13, v21, v22, v23, v31, v32, v33);
+    //m3[index] = m1[index]+m2[index];
+    /*m3[indexij] = m1[indexi0j0]+m1[indexi0j1]+m1[indexi0j2]+
+      m1[indexi1j0]+m1[indexij]+m1[indexi1j2]+
+      m1[indexi2j0]+m1[indexi2j1]+m1[indexi2j2];*/
+    m3[indexij] = s11+s22+s33;
   }
 }
 
-int main(int argc, char** argv) {
+int main()
+{
+  int filas = 900;
+  int columnas = 900;
+  int cont = 0;
 
-  int m1[filas][columnas];
-  int m2[filas][columnas];
-  int m3[filas][columnas];
-
-  /*int **m1 = new int*[filas];
-  int **m2 = new int*[filas];
-  int **m3 = new int*[filas];
+  int a[filas][columnas], b[filas][columnas];
+  float c[filas][columnas];
+  int *dev_a, *dev_b;
+  float *dev_c;
 
   for(int i=0; i<filas; i++)
   {
-    m1[i] = new int[columnas];
-    m2[i] = new int[columnas];
-    m3[i] = new int[columnas];
-  }*/
-  int i, j;
-  int c = 0;
-
-  /* inicializando variables con datos foo*/
-  for (i = 0; i < filas; i++) {
-    c = 0;
-    for (j = 0; j < columnas; j++) {
-      m1[i][j] = c;
-      m2[i][j] = c;
-      c++;
+    //cont = 0;
+    for(int j=0; j<columnas; j++)
+    {
+      a[i][j] = cont+i;
+      b[i][j] = cont+i;
+      cont++;
     }
   }
 
-  int *dm1, *dm2, *dm3;
+  auto t11 = std::chrono::high_resolution_clock::now();
 
-  cudaMalloc((void**) &dm1, filas * columnas * sizeof(int**));
-  cudaMalloc((void**) &dm2, filas * columnas * sizeof(int**));
-  cudaMalloc((void**) &dm3, filas * columnas * sizeof(int**));
+  cudaMalloc((void**) &dev_a, filas*columnas*sizeof(int));
+  cudaMalloc((void**) &dev_b, filas*columnas*sizeof(int));
+  cudaMalloc((void**) &dev_c, filas*columnas*sizeof(float));
 
-  // copiando memoria a la GPGPU
-  cudaMemcpy(dm1, m1, filas * columnas * sizeof(int**), cudaMemcpyHostToDevice);
-  cudaMemcpy(dm2, m2, filas * columnas * sizeof(int**), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_a, a, filas*columnas*sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_b, b, filas*columnas*sizeof(int), cudaMemcpyHostToDevice);
 
-  // cada bloque en dimensión x y y tendrá un tamaño de T Threads
-  dim3 dimThreadsBloque(T, T);
+  dim3 dimThreadsBloque(Threads, Threads);
 
-  // Calculando el número de bloques en 1D
-  float BFloat = (float) columnas / (float) T;
-  int B = (int) ceil(BFloat);
+  float BFloat = (float) columnas / (float) Threads;
+    int B = (int) ceil(BFloat);
 
   // El grid tendrá B número de bloques en x y y
-  dim3 dimBloques(B, B);
+    dim3 dimBloques(B, B);
 
-  // Llamando a ejecutar el kernel
-  sumaMatrices<<<dimBloques, dimThreadsBloque>>>(dm1, dm2, dm3);
+    add<<<dimBloques, dimThreadsBloque>>>(dev_a, dev_b, dev_c, filas, columnas);
 
-  // copiando el resultado a la memoria Host
-  cudaMemcpy(m3, dm3, filas * columnas * sizeof(int**), cudaMemcpyDeviceToHost);
-  //cudaMemcpy(m2, dm2, N * N * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(c, dev_c, filas*columnas*sizeof(float), cudaMemcpyDeviceToHost);
 
-  cudaFree(dm1);
-  cudaFree(dm2);
-  cudaFree(dm3);
+    auto t12 = std::chrono::high_resolution_clock::now();
 
-  printf("\n");
 
-  for (i = 0; i < filas; i++) {
-    for (j = 0; j < columnas; j++) {
-      printf(" [%d,%d]=%d", i, j, m3[i][j]);
+    /*for(int i=0; i< filas; i++)
+    {
+      for(int j=0; j<columnas; j++)
+      {
+        cout << i <<"-"<<j<<" : "<<c[i][j] << endl;
+      }
+    }*/
+    
+    cout << std::chrono::duration_cast<std::chrono::milliseconds>(t12 - t11).count() << endl;
 
-    }
-    printf("\n\n");
 
-  }
-  
-  cout << "B: "<<B << endl;
-  cout << "DimBloques.X: " << dimBloques.x << " DimbBloques.Y: " << dimBloques.y << endl;
-  cout << "DimThreadsBloque.X: " << dimThreadsBloque.x << " DimThreadsBloque.Y " << dimThreadsBloque.y <<endl;
-
-  return (EXIT_SUCCESS);
+  return 0; 
 }

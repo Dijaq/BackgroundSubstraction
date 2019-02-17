@@ -42,7 +42,7 @@ int heigth, width;
 
 int main()
 {
-	string PATH = "busStation/";
+	string PATH = "highway/";
 	srand(time(NULL));
 	auto duration =0;
 
@@ -60,7 +60,7 @@ int main()
 	cout << "Hola c++" << endl;*/
 
 	Mat img;
-	img = imread(PATH+"input/in000350.jpg", CV_LOAD_IMAGE_COLOR);
+	img = imread(PATH+"input/in000001.jpg", CV_LOAD_IMAGE_COLOR);
 	heigth = img.cols;
 	width = img.rows;
 
@@ -115,7 +115,7 @@ int main()
 
 	init_change_lsbp();
 
-	for(int f=351; f<=1699; f++)
+	for(int f=2; f<=1699; f++)
 	{
 		cout << "=========: " << f << endl;
 		//Only to read
