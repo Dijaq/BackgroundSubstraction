@@ -27,6 +27,9 @@ or write "make exec"
 - Run with the command:
 ./main2
 
+# Web Page
+[https://dijaq.github.io/backgroundSubtraction.github.io/]
+
 # 1. Framework[1]
 ![Alt text](https://github.com/Dijaq/BackgroundSubstraction/blob/master/datos/Framework.PNG?raw=true "Title")
 
