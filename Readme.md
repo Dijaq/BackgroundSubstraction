@@ -21,6 +21,7 @@ Using threads
 or write "make"
 - Run with the command:
 ./main
+
 Using cuda
 or write "make exec"
 - Run with the command:
