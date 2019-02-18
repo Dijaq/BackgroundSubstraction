@@ -108,7 +108,7 @@ int heigth, width;
   Mat img;
   //img = imread(PATH+"input/in000001.jpg", CV_LOAD_IMAGE_COLOR);
   
-  VideoCapture cap("sanPablo/SanPabloVideo.mp4");
+  VideoCapture cap("sanPablo/SanPabloVideo3.mp4");
   int i=0;
   Mat ones = Mat::ones(2, 3, CV_32FC1)*0.2;
   
@@ -131,6 +131,7 @@ int heigth, width;
     cap >> frame;
     if(i==0)
     {
+
       heigth = frame.cols;
       width = frame.rows;
       R = Mat::ones(width, heigth, CV_32FC1)*30.0;
@@ -145,11 +146,11 @@ int heigth, width;
       cout << "=========: " << i << endl;
       //Only to read
       auto t11 = std::chrono::high_resolution_clock::now();
-      imshow("imagen", frame);
-      waitKey(5000);
-      cout << "Step0" << endl;
+      //waitKey(5000);
+      //cout << "Step0" << endl;
       Mat result = SVD_step(frame, 6, 2, 5, 0.05, 0.02);
-      cout << "Step1" << endl;
+      imshow("imagen", result);
+      //cout << "Step1" << endl;
     
       
       char c=(char)waitKey(1);
@@ -170,7 +171,7 @@ int heigth, width;
 
 int main()
 {
-  string PATH = "streetLight/";
+  string PATH = "highway/";
   srand(time(NULL));
   auto duration =0;
 

@@ -46,7 +46,7 @@ list<Mat> samples_frame;
 list<Mat> samples_change_lsbp;
 int heigth, width;
 
-/*int main()
+int main()
 {
 	string PATH = "peopleInShade/";
 	srand(time(NULL));
@@ -103,7 +103,7 @@ int heigth, width;
 			
 			char c=(char)waitKey(1);
 			if(c==1)
-				break;
+				break; 
 
 
 			auto t12 = std::chrono::high_resolution_clock::now();
@@ -115,9 +115,9 @@ int heigth, width;
 	
 	}
 	return 0;
-}*/
+}
 
-int main()
+/*int main()
 {
 	string PATH = "office/";
 	srand(time(NULL));
@@ -174,7 +174,7 @@ int main()
 	
 	}
 	return 0;
-}
+}*/
 
 
 void export_mat_excel(Mat img, string name)
