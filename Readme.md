@@ -46,11 +46,6 @@ or write "make exec"
 ## 3.3 Own video
 ![Alt text](https://github.com/Dijaq/BackgroundSubstraction/blob/master/datos/OwnVideo.PNG?raw=true "Title")
 
-## Video
-
-[![IMAGE ALT TEXT HERE](https://github.com/Dijaq/BackgroundSubstraction/blob/master/datos/OwnVideo.PNG)]https://www.youtube.com/watch?v=wpAwdsubl1w)
-
-
 # Fuentes
 - [1] Lili Guo, Dan Xu, and Zhenping Qiang, “Background Subtraction using Local SVD Binary Pattern”.
 - [2] M. Hofmann, P. Tiefenbacher, and G. Rigoll, “Background segmentation with feedback: The pixel-based adaptive segmenter.”.
