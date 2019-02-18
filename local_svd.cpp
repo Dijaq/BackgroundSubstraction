@@ -17,6 +17,8 @@ namespace fs = std::experimental::filesystem::v1;
 
 #define THREAD_MAX 4
 
+void video(string);
+void cdnet(string, int);
 void extract_LSBP(Mat frame, Mat &output, int tau);
 void extract_LSBP_v2(Mat frame, Mat change_frame, Mat last_lsbp, Mat &output, int tau);
 Mat SVD_init(Mat frame, int samples);
@@ -48,133 +50,150 @@ int heigth, width;
 
 int main()
 {
-	string PATH = "peopleInShade/";
-	srand(time(NULL));
-	auto duration =0;
+  string pathVideoName = "sanPablo/SanPabloVideo3.mp4";
+  string pathCDnet = "office/";
+  bool isVideo = false;
+  if(isVideo)
+    video(pathVideoName);
+  else
+  {
+    int startFrame = 570;
+    cdnet(pathCDnet,startFrame);
+  }
 
-	int samples = 10;
-
-	Mat img;
-	//img = imread(PATH+"input/in000001.jpg", CV_LOAD_IMAGE_COLOR);
-	
-	VideoCapture cap("sanPablo/SanPabloVideo.mp4");
-	int i=0;
-	Mat ones = Mat::ones(2, 3, CV_32FC1)*0.2;
-	
-
-	namedWindow("imagen", WINDOW_AUTOSIZE);
-	//imshow("imagen", img);
-	//Mat result = SVD_init(img, samples);
-	waitKey(1);
-
-	init_change_lsbp();
-
-	if(!cap.isOpened())
-	{
-		cout << "Error opening video stream" << endl;
-	} 
-
-	while(1)
-	{
-		Mat frame;
-		cap >> frame;
-		if(i==0)
-		{
-			heigth = frame.cols;
-			width = frame.rows;
-			R = Mat::ones(width, heigth, CV_32FC1)*30.0;
-			D = Mat::ones(width, heigth, CV_32FC1)*0.0;
-			T = Mat::ones(width, heigth, CV_32FC1)*0.08;
-			cout << "heigth: " << R.cols << endl;
-			cout << "width: " << width << endl;
-			Mat result = SVD_init(frame, samples);
-		}
-		else
-		{			
-			cout << "=========: " << i << endl;
-			//Only to read
-			auto t11 = std::chrono::high_resolution_clock::now();
-			imshow("imagen", frame);
-			waitKey(5000);
-			cout << "Step0" << endl;
-			Mat result = SVD_step(frame, 6, 2, 5, 0.05, 0.02);
-			cout << "Step1" << endl;
-		
-			
-			char c=(char)waitKey(1);
-			if(c==1)
-				break; 
-
-
-			auto t12 = std::chrono::high_resolution_clock::now();
-			
-			duration = std::chrono::duration_cast<std::chrono::milliseconds>(t12 - t11).count();
-			cout << "Time of proccess: " << duration << endl;
-		}
-		i++;
-	
-	}
-	return 0;
+  return 0;
 }
 
-/*int main()
+void video(string pathVideo)
 {
-	string PATH = "office/";
-	srand(time(NULL));
-	auto duration =0;
+  string PATH = "peopleInShade/";
+  srand(time(NULL));
+  auto duration =0;
 
-	int samples = 10;
+  int samples = 10;
 
-	Mat img;
-	img = imread(PATH+"input/in000570.jpg", CV_LOAD_IMAGE_COLOR);
-	heigth = img.cols;
-	width = img.rows;
+  Mat img;
+  //img = imread(PATH+"input/in000001.jpg", CV_LOAD_IMAGE_COLOR);
+  
+  VideoCapture cap(pathVideo);
+  int i=0;//  Mat ones = Mat::ones(2, 3, CV_32FC1)*0.2;
+  
 
-	Mat ones = Mat::ones(2, 3, CV_32FC1)*0.2;
-	R = Mat::ones(width, heigth, CV_32FC1)*30.0;
-	D = Mat::ones(width, heigth, CV_32FC1)*0.0;
-	
-	T = Mat::ones(width, heigth, CV_32FC1)*0.08;
+  namedWindow("imagen", WINDOW_AUTOSIZE);
+   namedWindow("input", WINDOW_AUTOSIZE);
+  //imshow("imagen", img);
+  //Mat result = SVD_init(img, samples);
+  waitKey(1);
 
-	namedWindow("imagen", WINDOW_AUTOSIZE);
-	imshow("imagen", img);
-	Mat result = SVD_init(img, samples);
-	waitKey(1);
+  init_change_lsbp();
 
-	init_change_lsbp();
+  if(!cap.isOpened())
+  {
+    cout << "Error opening video stream" << endl;
+  } 
 
-	for(int f=571; f<=1699; f++)
-	{
-		cout << "=========: " << f << endl;
-		//Only to read
-		if(f<10)
-			img = imread(PATH+"input/in00000"+to_string(f)+".jpg", CV_LOAD_IMAGE_COLOR);
-		else
-			if(f<100)
-				img = imread(PATH+"input/in0000"+to_string(f)+".jpg", CV_LOAD_IMAGE_COLOR);
-			else
-				if(f<1000)
-					img = imread(PATH+"input/in000"+to_string(f)+".jpg", CV_LOAD_IMAGE_COLOR);
-				else
-					img = imread(PATH+"input/in00"+to_string(f)+".jpg", CV_LOAD_IMAGE_COLOR);
-		
-		auto t11 = std::chrono::high_resolution_clock::now();
-		
-		Mat result = SVD_step(img, 6, 2, 5, 0.05, 0.02);
-	
-		imshow("imagen", result);
-		waitKey(1);
+  while(1)
+  {
+    Mat frame;
+    cap >> frame;
+    if(i==0)
+    {
+
+      heigth = frame.cols;
+      width = frame.rows;
+      R = Mat::ones(width, heigth, CV_32FC1)*30.0;
+      D = Mat::ones(width, heigth, CV_32FC1)*0.0;
+      T = Mat::ones(width, heigth, CV_32FC1)*0.08;
+      cout << "heigth: " << R.cols << endl;
+      cout << "width: " << width << endl;
+      Mat result = SVD_init(frame, samples);
+    }
+    else
+    {     
+      //cout << "=========: " << i << endl;
+      //Only to read
+      auto t11 = std::chrono::high_resolution_clock::now();
+      //waitKey(5000);
+      //cout << "Step0" << endl;
+      Mat result = SVD_step(frame, 6, 2, 5, 0.05, 0.02);
+      imshow("input", frame);
+      imshow("imagen", result);
+      //cout << "Step1" << endl;
+    
+      
+      char c=(char)waitKey(1);
+      if(c==1)
+        break;
 
 
-		auto t12 = std::chrono::high_resolution_clock::now();
-		
-		duration = std::chrono::duration_cast<std::chrono::milliseconds>(t12 - t11).count();
-		cout << "Time of proccess: " << duration << endl;
-		
-	
-	}
-	return 0;
-}*/
+      auto t12 = std::chrono::high_resolution_clock::now();
+      
+      duration = std::chrono::duration_cast<std::chrono::milliseconds>(t12 - t11).count();
+      cout << "Frame: " << i <<" Time: " << duration << endl;
+    }
+    i++;
+  
+  }
+}
+
+void cdnet(string PATH, int starFrame)
+{
+  //string PATH = "highway/";
+  srand(time(NULL));
+  auto duration =0;
+
+  int samples = 10;
+
+  Mat img;
+  img = imread(PATH+"input/in000001.jpg", CV_LOAD_IMAGE_COLOR);
+  heigth = img.cols;
+  width = img.rows;
+
+  Mat ones = Mat::ones(2, 3, CV_32FC1)*0.2;
+  R = Mat::ones(width, heigth, CV_32FC1)*30.0;
+  D = Mat::ones(width, heigth, CV_32FC1)*0.0;
+  
+  T = Mat::ones(width, heigth, CV_32FC1)*0.08;
+
+  namedWindow("imagen", WINDOW_AUTOSIZE);
+  namedWindow("input", WINDOW_AUTOSIZE);
+  imshow("imagen", img);
+  Mat result = SVD_init(img, samples);
+  waitKey(1);
+
+  init_change_lsbp();
+
+  for(int f=starFrame; f<=1699; f++)
+  {
+    //Only to read
+    if(f<10)
+      img = imread(PATH+"input/in00000"+to_string(f)+".jpg", CV_LOAD_IMAGE_COLOR);
+    else
+      if(f<100)
+        img = imread(PATH+"input/in0000"+to_string(f)+".jpg", CV_LOAD_IMAGE_COLOR);
+      else
+        if(f<1000)
+          img = imread(PATH+"input/in000"+to_string(f)+".jpg", CV_LOAD_IMAGE_COLOR);
+        else
+          img = imread(PATH+"input/in00"+to_string(f)+".jpg", CV_LOAD_IMAGE_COLOR);
+    
+    auto t11 = std::chrono::high_resolution_clock::now();
+    
+    Mat result = SVD_step(img, 6, 2, 5, 0.05, 0.02);
+  
+    imshow("input", img);
+    imshow("imagen", result);
+    waitKey(1);
+
+
+    auto t12 = std::chrono::high_resolution_clock::now();
+    
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(t12 - t11).count();
+    cout << "Frame: " << f <<" Time: " << duration << endl;
+    
+  
+  }
+}
 
 
 void export_mat_excel(Mat img, string name)
@@ -544,7 +563,7 @@ Mat SVD_step(Mat frame, int threshold=4, int matches=2, int Rscale=5, double Rlr
 	auto t21 = std::chrono::high_resolution_clock::now();
 	update_samples_lsbp();
 	auto t22 = std::chrono::high_resolution_clock::now();
-	cout << "UPDATE LSBP: "<<std::chrono::duration_cast<std::chrono::milliseconds>(t22 - t21).count() << endl;
+	//cout << "UPDATE LSBP: "<<std::chrono::duration_cast<std::chrono::milliseconds>(t22 - t21).count() << endl;
 	
 	init_zeros_change_lsbp();
 
