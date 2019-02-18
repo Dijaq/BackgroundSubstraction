@@ -26,8 +26,8 @@ or write "make exec"
 ./main2
 
 # 1. Results
-## 1.1 Pre-processing, detection and tracking
-![Alt text](https://github.com/Dijaq/BackgroundSubstaction/datos/Table.PNG?raw=true "Title")
+## 1.1 Time comparation
+![Alt text](https://github.com/Dijaq/BackgroundSubstraction/datos/Table.PNG?raw=true "Title")
 
 
 
