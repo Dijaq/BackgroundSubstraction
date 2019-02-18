@@ -27,7 +27,7 @@ or write "make exec"
 
 # 1. Results
 ## 1.1 Pre-processing, detection and tracking
-![Alt text](https://github.com/Dijaq/BackgroundSubstaction/blob/master/datos/Table.PNG?raw=true "Title")
+![Alt text](https://github.com/Dijaq/BackgroundSubstaction/datos/Table.PNG?raw=true "Title")
 
 
 
