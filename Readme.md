@@ -27,7 +27,7 @@ or write "make exec"
 
 # 1. Results
 ## 1.1 Time comparation
-![Alt text](https://github.com/Dijaq/BackgroundSubstraction/datos/Table.PNG?raw=true "Title")
+![Alt text](https://github.com/Dijaq/BackgroundSubstraction/tree/master/datos/Table.PNG?raw=true "Title")
 
 
 
