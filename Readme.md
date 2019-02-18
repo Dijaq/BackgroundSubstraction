@@ -48,7 +48,7 @@ or write "make exec"
 
 ## Video
 
-[![IMAGE ALT TEXT HERE](https://github.com/Dijaq/BackgroundSubstraction/blob/master/datos/OwnVideo.PNG)]https://github.com/Dijaq/BackgroundSubstraction/blob/master/datos/SanPabloLSBP.mp4)
+[![IMAGE ALT TEXT HERE](https://github.com/Dijaq/BackgroundSubstraction/blob/master/datos/OwnVideo.PNG)]https://www.youtube.com/watch?v=wpAwdsubl1w)
 
 
 # Fuentes
