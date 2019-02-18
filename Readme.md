@@ -1,9 +1,10 @@
 # Background Substraction using Local SVD Binary Pattern
 El presente proyecto es una implementación en c++ del algoritmo LSBP
 
-# Ejecucion
+# Getting Started
 Requirements:
 - Sistema Operativo: Ubuntu
+- Install CUDA
 - Opencv 3.2.0 o superior
 - Compilador gcc, g++
 
