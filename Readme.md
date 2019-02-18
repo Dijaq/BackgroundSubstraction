@@ -2,19 +2,34 @@
 El presente proyecto es una implementación en c++ del algoritmo LSBP
 
 # Ejecucion
-Requisitos:
+Requirements:
 - Sistema Operativo: Ubuntu
 - Opencv 3.2.0 o superior
 - Compilador gcc, g++
 
-Ejecucion:
-Para ejecutar el proyecto una ves que tenga los requisitos siga los siguientes pasos:
-- Clone o descargue el proyecto.
-- Abra un terminal y dirijase a la carpeta del proyecto que clono.
-- Compile con el siguiente comando:
-g++ -ggdb `pkg-config --cflags opencv` -o `main main.cpp .cpp` main.cpp `pkg-config --libs opencv`
-- Ejecute la aplicacion con el comando:
+To run the code:
+- Clone o download the source code.
+- Open a terminal in the repository folder.
+- Compile with the command:
+-using threads
+g++ local_svd.cpp -fopenmp -o main -std=c++11 -lpthread -lstdc++fs  -DWITH_CUDA=ON -larmadillo `pkg-config --cflags --libs opencv`
+- using cuda
+nvcc local_svd.cu -o main2 -std=c++11 -lpthread  -larmadillo `pkg-config --cflags --libs opencv`
+
+-using threads
+or write "make"
+- Run with the command:
 ./main
+- using cuda
+or write "make exec"
+- Run with the command:
+./main2
+
+# 1. Results
+## 1.1 Pre-processing, detection and tracking
+![Alt text](https://github.com/Dijaq/BackgroundSubstaction/blob/master/datos/Table.PNG?raw=true "Title")
+
+
 
 # Fuentes
 - [1] Lili Guo, Dan Xu, and Zhenping Qiang, “Background Subtraction using Local SVD Binary Pattern”.
